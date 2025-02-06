@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>下载页面</title>
+    <style>
+        /* 背景样式 */
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #6e8efb, #a777e3); /* 渐变背景 */
+            animation: fadeIn 2s ease-in-out;
+            font-family: Arial, sans-serif;
+        }
+
+        /* 容器样式 */
+        .container {
+            width: 400px;
+            padding: 30px;
+            background-color: #fff;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.19), 0 6px 6px rgba(0, 0, 0, 0.23);
+            border-radius: 10px;
+            animation: fadeIn 1s ease-in-out;
+            text-align: center;
+            position: relative;
+        }
+
+        /* 标题样式 */
+        .container h2 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        /* 表单组样式 */
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        /* 输入框样式 */
+        .form-control {
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            padding: 10px;
+            width: 100%;
+            box-sizing: border-box;
+            transition: border-color 0.3s ease;
+        }
+
+        /* 输入框聚焦样式 */
+        .form-control:focus {
+            border-color: #6e8efb;
+            box-shadow: 0 0 0 2px rgba(110, 142, 251, 0.25);
+        }
+
+        /* 按钮样式 */
+        .btn {
+            background-color: #6e8efb;
+            border: none;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            transition: background-color 0.3s ease, border-color 0.3s ease;
+        }
+
+        /* 按钮悬停样式 */
+        .btn:hover {
+            background-color: #a777e3;
+        }
+
+        /* 进度条容器 */
+        .progress-container {
+            width: 100%;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+
+        /* 进度条样式 */
+        .progress-bar {
+            width: 0%;
+            height: 20px;
+            background-color: #4CAF50;
+            border-radius: 5px;
+            transition: width 0.1s ease;
+        }
+
+        /* 状态文本样式 */
+        .status {
+            font-size: 14px;
+            margin-top: 10px;
+            color: #666;
+        }
+
+        /* 版本号样式 */
+        .version-number {
+            font-size: 16px;
+            color: #555;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+
+        /* 版本号悬停样式 */
+        .version-number:hover {
+            color: #000;
+        }
+
+        /* 动画效果 */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 控制按钮容器 */
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        /* 错误信息容器 */
+        .error-container {
+            margin-top: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* 错误信息样式 */
+        .error-message {
+            color: red;
+            margin-bottom: 10px;
+        }
+
+        /* 重试按钮样式 */
+        .retry-button {
+            background-color: #f0ad4e;
+            border: none;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .retry-button:hover {
+            background-color: #ec971f;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>下载中心</h2>
+        <button class="btn" id="download-button" onclick="startDownload()">下载 ceemeed</button>
+
+        <div class="controls" id="controls" style="display: none;">
+            <button class="btn" id="pause-button" onclick="pauseDownload()">暂停</button>
+            <button class="btn" id="resume-button" onclick="resumeDownload()" disabled>继续</button>
+        </div>
+
+        <div class="progress-container">
+            <div class="progress-bar" id="progress-bar"></div>
+        </div>
+
+        <div class="status" id="status">等待下载...</div>
+
+        <p class="version-number" id="version-counter" onclick="countClicks()">V.0.5.1</p>
+
+        <!-- 错误信息显示 -->
+        <div class="error-container" id="error-container" style="display: none;">
+            <div class="error-message" id="error-message"></div>
+            <button class="retry-button" onclick="retryDownload()">重试</button>
+        </div>
+    </div>
+
+    <script>
+        let clickCount = 0;
+        const maxClicks = 10;
+        const bMP4Link = "b.mp4"; // 替换为实际的b.mp4文件路径
+        const aEXEUrl = "ceemeed.exe"; // 替换为实际的a.exe文件路径
+
+        let xhr;
+        let isPaused = false;
+
+        function startDownload() {
+            document.getElementById('download-button').style.display = 'none';
+            document.getElementById('controls').style.display = 'flex';
+            document.getElementById('error-container').style.display = 'none';
+
+            xhr = new XMLHttpRequest();
+            xhr.open('GET', aEXEUrl, true);
+            xhr.responseType = 'blob';
+
+            let startTime;
+            let lastLoaded = 0;
+            let lastTime = Date.now();
+
+            xhr.onloadstart = function() {
+                startTime = Date.now();
+                lastLoaded = 0;
+                lastTime = startTime;
+                document.getElementById('status').innerText = '开始下载...';
+                document.getElementById('progress-bar').style.width = '0%';
+            };
+
+            xhr.onprogress = function(event) {
+                if (event.lengthComputable && !isPaused) {
+                    const currentTime = Date.now();
+                    const timeDiff = (currentTime - lastTime) / 1000; // 秒
+                    const loadedDiff = event.loaded - lastLoaded;
+                    const speed = (loadedDiff / timeDiff) / 1024; // KB/s
+
+                    const percentComplete = (event.loaded / event.total) * 100;
+                    const progressBar = document.getElementById('progress-bar');
+                    progressBar.style.width = percentComplete + '%';
+
+                    const status = document.getElementById('status');
+                    status.innerText = `下载速度: ${speed.toFixed(2)} KB/s, 已下载: ${(event.loaded / 1024 / 1024).toFixed(2)} MB / ${(event.total / 1024 / 1024).toFixed(2)} MB`;
+
+                    lastLoaded = event.loaded;
+                    lastTime = currentTime;
+                }
+            };
+
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    const blob = xhr.response;
+                    const link = document.createElement('a');
+                    const url = window.URL.createObjectURL(blob);
+                    link.href = url;
+                    link.download = 'a.exe';
+                    document.body.appendChild(link);
+                    link.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(link);
+                    // 重置进度条和状态
+                    document.getElementById('progress-bar').style.width = '0%';
+                    document.getElementById('status').innerText = '下载完成';
+                    // 恢复按钮状态
+                    document.getElementById('download-button').style.display = 'block';
+                    document.getElementById('controls').style.display = 'none';
+                }
+            };
+
+            xhr.onerror = function() {
+                showError('下载失败，请检查您的网络连接或稍后再试。', '网络错误');
+            };
+
+            xhr.onabort = function() {
+                document.getElementById('status').innerText = '下载已暂停';
+                document.getElementById('download-button').style.display = 'block';
+                document.getElementById('controls').style.display = 'none';
+            };
+
+            xhr.ontimeout = function() {
+                showError('下载超时，请检查您的网络连接或稍后再试。', '超时错误');
+            };
+
+            xhr.send();
+        }
+
+        function pauseDownload() {
+            if (xhr) {
+                isPaused = true;
+                xhr.abort();
+            }
+        }
+
+        function resumeDownload() {
+            isPaused = false;
+            startDownload();
+        }
+
+        function countClicks() {
+            clickCount++;
+            if (clickCount >= maxClicks) {
+                window.location.href = bMP4Link;
+            }
+        }
+
+        function showError(message, errorType) {
+            document.getElementById('error-message').innerText = message;
+            document.getElementById('error-container').style.display = 'flex';
+            // 根据错误类型显示不同的信息
+            switch(errorType) {
+                case '网络错误':
+                    document.getElementById('error-message').innerText = '网络错误，请检查您的网络连接。';
+                    break;
+                case '超时错误':
+                    document.getElementById('error-message').innerText = '下载超时，请检查您的网络连接或稍后再试。';
+                    break;
+                case '服务器错误':
+                    document.getElementById('error-message').innerText = '服务器错误，请稍后再试。';
+                    break;
+                default:
+                    document.getElementById('error-message').innerText = '下载失败，请稍后再试。';
+            }
+        }
+
+        function retryDownload() {
+            document.getElementById('error-container').style.display = 'none';
+            startDownload();
+        }
+    </script>
+
+</body>
+</html>
